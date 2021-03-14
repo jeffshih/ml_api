@@ -4,3 +4,8 @@ __pycache__/
 .vscode/
 #mac osx related
 .DS_Store
+
+
+#model related
+*.pkl
+trainrequest.json
