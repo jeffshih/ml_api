@@ -76,10 +76,10 @@ class ModelFactory(object):
 
 
     def getModelTestRes(self):
-        return('test with {}: {}'.format(self.modelType, self.model.score(self.X_test, self.y_test)))
+        return('test score with {} model: {}'.format(self.modelType, self.model.score(self.X_test, self.y_test)))
 
     def getModetValRes(self):
-        return('val with {}: {}'.format(self.modelType, self.model.score(self.X_val, self.y_val))) 
+        return('val score with {} model: {}'.format(self.modelType, self.model.score(self.X_val, self.y_val))) 
 
     def predict(self, feature):
         return self.model.predict(feature)

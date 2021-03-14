@@ -11,9 +11,6 @@ import numpy as np
 
 
 
-class FeatureException(Exception):
-    def __init__(self, name:str):
-        self.name=name
 
 class ModelName(str, Enum):
     dt = "DecisionTree"
@@ -91,39 +88,16 @@ async def setData(request:TrainRequest):
         return "Invalid input format for split ratio"
     MF.genDataSet(*splitRatio)
     MF.setModel(modelName.value)
-    T = MF.getModelTestRes()
-    V = MF.getModetValRes()
     if request.save == True:
-        modelPkl = open("./temp/{}.pkl".format(modelName), "rb")
-        #return StreamingResponse(modelPkl)
         return FileResponse(path="./temp/{}.pkl".format(modelName), filename="{}.pkl".format(modelName))
     else:
         return "Training finished" 
 
 
 @app.get("/train/{modelName}/")
-async def trainModel(modelName: ModelName, save: bool = False):
-    MF.genDataSet()
-    MF.setModel(modelName.value)
-    T = MF.getModelTestRes()
-    V = MF.getModetValRes()
-    if save == True:
-        modelPkl = open("./temp/{}.pkl".format(modelName), "rb")
-        #return StreamingResponse(modelPkl)
-        return FileResponse(path="./temp/{}.pkl".format(modelName), filename="{}.pkl".format(modelName))
-    else:
-        return "Training finished"
+async def trainModel(modelName: ModelName):
+    return FileResponse(path="./temp/{}.pkl".format(modelName), filename="{}.pkl".format(modelName))
 
-@app.get("/trainSave")
-async def saveModel()-> FileResponse:
-    MF.genDataSet()
-    MF.setModel()
-    m = MF.genModel()
-    T = MF.getModelTestRes()
-    V = MF.getModetValRes()
-    msg = "{} {}".format(T,V)
-    modelPkl = open("./temp/model.pkl",mode='rb')
-    return FileResponse(filename="./temp/model.pkl")
 
 
 @app.get("/testModel", response_model=ModelResponse)
