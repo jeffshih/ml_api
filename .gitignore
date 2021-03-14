@@ -1,0 +1,6 @@
+#env related
+ml/
+__pycache__/
+.vscode/
+#mac osx related
+.DS_Store
