@@ -1,6 +1,7 @@
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVR
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import AdaBoostRegressor
 from sklearn.model_selection import GridSearchCV
@@ -36,14 +37,21 @@ class ModelFactory(object):
     def setModel(self, modelName = "DecisionTree"):
         self.modelType = modelName
         if(modelName == "DecisionTree"):
-            self.model = 
-        #todo choose model
+            self.__genDecisionTree()
+        elif(modelName == "LogisticRegression"):
+            self.__genLR()
+        else:
+            self.__genSVM()
+        path = "./temp/{}.pkl".format(modelName)
+        modelDump = open(path, "wb")
+        pickle.dump(self.model, modelDump)
+        modelDump.close()
 
     def printValidationSet(self):
         print(self.X_val)
         print(self.y_val)
     
-    def genDataSet(self, train=0.75, val=0.15, test=0.1):
+    def genDataSet(self, train=0.75, test=0.15, val=0.1):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=1-train, stratify=self.y)
         self.X_val, self.X_test, self.y_val, self.y_test = train_test_split(self.X_test, self.y_test, test_size=test/(test + val), stratify=self.y_test)
 
@@ -52,40 +60,26 @@ class ModelFactory(object):
         rng = np.random.RandomState(42)
         params_dt = [{'max_depth':np.arange(1,21),
                       'min_samples_leaf':[1, 5, 10, 20, 50, 100, 200]}]
-        self.model = AdaBoostRegressor(DecisionTreeRegressor(max_depth=10), n_estimators=300, random_state=rng)
+        self.model = AdaBoostRegressor(DecisionTreeRegressor(max_depth=30), n_estimators=300, random_state=rng)
+        self.model.fit(self.X_train, self.y_train)
+
+        
+    def __genLR(self):
+        self.model = LogisticRegression(solver='liblinear', max_iter=1000)
+        self.model.fit(self.X_train, self.y_train)
         
 
-    def genModel(self):
-        dt = DecisionTreeRegressor()
-        rng = np.random.RandomState(1)
-        #print(dt.get_params().keys())
-        params_dt = [{'max_depth':np.arange(1,21),
-                      'min_samples_leaf':[1, 5, 10, 20, 50, 100, 200]}]
-        ab = AdaBoostRegressor(DecisionTreeRegressor(max_depth=10), n_estimators=300,random_state=rng)
-        dt_gs = GridSearchCV(dt, param_grid=params_dt, cv=5)
-        dt_gs.fit(self.X_train, self.y_train)
-        ab.fit(self.X_train, self.y_train)
-        
-        #if ensemble means using single algorithms, using adaboost to construct the model otherwise prepare the api
-        #and ready to use GSCV to tune hyperparam
-        
-        #print('adaboost: {}'.format(ab.score(self.X_test, self.y_test)))
-        dt_best = dt_gs.best_estimator_
-        #print('dt_gs: {}'.format(dt_best.score(self.X_test, self.y_test)))
-        self.model = ab
-        modelDump = open("./temp/model.pkl","wb")
-        pickle.dump(self.model, modelDump)
-        modelDump.close()
-        self.modelResult = dt_best
-        return self.model
+    def __genSVM(self):
+        self.model = SVR()
+        self.model.fit(self.X_train, self.y_train)
+
+
 
     def getModelTestRes(self):
-#        print('dt: {}'.format(self.modelResult.score(self.X_test, self.y_test)))
-        return('ab: {}'.format(self.model.score(self.X_test, self.y_test)))
+        return('test with {}: {}'.format(self.modelType, self.model.score(self.X_test, self.y_test)))
 
     def getModetValRes(self):
-#        print('dt: {}'.format(self.modelResult.score(self.X_val, self.y_val))) 
-        return('ab: {}'.format(self.model.score(self.X_val, self.y_val))) 
+        return('val with {}: {}'.format(self.modelType, self.model.score(self.X_val, self.y_val))) 
 
     def predict(self, feature):
         return self.model.predict(feature)

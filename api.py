@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
+from starlette.responses import StreamingResponse
 from starlette.routing import request_response
 from starlette.types import Message
 from model import ModelFactory
@@ -30,6 +31,7 @@ class ModelResponse(BaseModel):
 
 
 class TrainRequest(BaseModel):
+    split: Optional[List[float]]
     model: ModelName
     save: bool
 
@@ -58,24 +60,59 @@ async def explain_api() -> ModelResponse:
 
 @app.post("/predict")
 async def get_model_predictions(request: PredictRequest) -> ModelResponse:
-    #TODO  YOUR CODE HERE
-    pass
-
-@app.post("/train")
-async def trainModel(request: TrainRequest):
-    modelName = request.model
-    MF.setModel(modelName.value)
-    if request.save:
-        return "saving {}".format(modelName)
-    else:
-        return "model {} is doing good".format(modelName)
+    feature=request.features
+    tmp = []
+    try:
+        for k, v in feature.items():
+            if len(v) != 12:
+                raise IndexError
+            tmp.append(v)
+        inputVector = np.asarray(tmp)
+    except IndexError:
+        return ModelResponse(error="Invalid input data shape")
+#    print(inputVector)
+    output = MF.predict(inputVector)
+#    print(output)
+    res = {}
+    for idx, k in enumerate(feature.keys()):
+        res[k]= output[idx]
+#    print(res)
+    return ModelResponse(predictions=[res])
     
 
-    '''
-    MF.genDataSet(modelName)
-    MF.setModel() 
-    m = MF.genModel()
-    '''
+@app.post("/train")
+async def setData(request:TrainRequest):
+    modelName = request.model
+    try:
+        splitRatio = np.array(request.split)
+        if len(splitRatio)!=3 or len([*filter(lambda x: x>=0, splitRatio)]) <3 or np.sum(splitRatio)!=1:
+            raise ValueError
+    except ValueError:
+        return "Invalid input format for split ratio"
+    MF.genDataSet(*splitRatio)
+    MF.setModel(modelName.value)
+    T = MF.getModelTestRes()
+    V = MF.getModetValRes()
+    if request.save == True:
+        modelPkl = open("./temp/{}.pkl".format(modelName), "rb")
+        #return StreamingResponse(modelPkl)
+        return FileResponse(path="./temp/{}.pkl".format(modelName), filename="{}.pkl".format(modelName))
+    else:
+        return "Training finished" 
+
+
+@app.get("/train/{modelName}/")
+async def trainModel(modelName: ModelName, save: bool = False):
+    MF.genDataSet()
+    MF.setModel(modelName.value)
+    T = MF.getModelTestRes()
+    V = MF.getModetValRes()
+    if save == True:
+        modelPkl = open("./temp/{}.pkl".format(modelName), "rb")
+        #return StreamingResponse(modelPkl)
+        return FileResponse(path="./temp/{}.pkl".format(modelName), filename="{}.pkl".format(modelName))
+    else:
+        return "Training finished"
 
 @app.get("/trainSave")
 async def saveModel()-> FileResponse:
@@ -84,7 +121,7 @@ async def saveModel()-> FileResponse:
     m = MF.genModel()
     T = MF.getModelTestRes()
     V = MF.getModetValRes()
-    msg = "Test score :{}\n Validation score:{}".format(T,V)
+    msg = "{} {}".format(T,V)
     modelPkl = open("./temp/model.pkl",mode='rb')
     return FileResponse(filename="./temp/model.pkl")
 
@@ -92,17 +129,11 @@ async def saveModel()-> FileResponse:
 @app.get("/testModel", response_model=ModelResponse)
 async def testMF() -> ModelResponse:
     X = np.array([[63,1,103,1,35,0,179000,0.9,136,1,1,270]])
-    #try:
     P = MF.predict(X)
-    #except:
-    #    raise ValueError
     return ModelResponse(predictions=[{"Prediction":P}])
 
-@app.get("/testResponse", response_model=ModelResponse)
-async def testMF() -> ModelResponse:
-    return ModelResponse(predictions=[{"a":1.0},{"b":0.3,"c":2.1}])
-
-@app.get("/testSaveModel", response_model=TrainResponse)
-async def saveModel() ->TrainResponse:
-
-    return ModelResponse()
+@app.get("/getModelScore")
+async def getScore():
+    T = MF.getModelTestRes()
+    V = MF.getModetValRes()
+    return "{},{}".format(T,V)
