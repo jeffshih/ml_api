@@ -19,7 +19,6 @@ class ModelFactory(object):
         self.modelType = None
         
         self.model = None
-        self.modelResult = None
 
 
         self.dataset = pd.read_csv("./heart_failure_clinical_records_dataset.csv")
@@ -76,10 +75,10 @@ class ModelFactory(object):
 
 
     def getModelTestRes(self):
-        return('test score with {} model: {}'.format(self.modelType, self.model.score(self.X_test, self.y_test)))
+        return('Test score with {} model: {}'.format(self.modelType, self.model.score(self.X_test, self.y_test)))
 
     def getModetValRes(self):
-        return('val score with {} model: {}'.format(self.modelType, self.model.score(self.X_val, self.y_val))) 
+        return('Validation score with {} model: {}'.format(self.modelType, self.model.score(self.X_val, self.y_val))) 
 
     def predict(self, feature):
         return self.model.predict(feature)
