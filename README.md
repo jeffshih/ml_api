@@ -19,7 +19,7 @@ $ uvicorn api:app
 ### Train model
 ```shell
 #Train the model without saving
-curl -X GET "http://127.0.0.1:8000/train" 
+curl -X GET "http://0.0.0.0:8000/train" 
 
 #Train the modle and save to disk
 curl -X GET "http://0.0.0.0:8000/train?save=true" --output model.joblib
@@ -82,3 +82,5 @@ https://towardsdatascience.com/ensemble-learning-using-scikit-learn-85c4531ff86a
 GridSearch for optimization and pipeline for basic feature engineering
 https://scikit-learn.org/stable/modules/grid_search.html#composite-grid-search
 
+Stacking
+https://machinelearningmastery.com/stacking-ensemble-machine-learning-with-python/
