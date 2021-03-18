@@ -17,27 +17,15 @@ $ uvicorn api:app
 
 ## Usage
 ### Train model
-Currently support 3 kind of models, DecisionTree, LogisticRegression and SVM
-save controls to save the model to local disk or not
-split is for splitting the dataset, each represent the ratio of training, testing, validation
-```json
-#trainrequest.json
-
-{
-    "model":"LogisticRegression",  
-    "save":false,
-    "split":[0.6, 0.2, 0.2]
-}
-```
 ```shell
 #Train the model without saving
-curl -X POST "http://0.0.0.0:8000/train" -H "accept: application/json" -H "Content-Type: application/json" -d @trainrequest.json
+curl -X GET "http://127.0.0.1:8000/train" 
 
 #Train the modle and save to disk
-curl -X POST "http://0.0.0.0:8000/train" -H "accept: application/json" -H "Content-Type: application/json" -d @trainrequest.json --output LR.pkl
+curl -X GET "http://0.0.0.0:8000/train?save=true" --output model.joblib
 
 #Save the model after training
-curl -X GET "http://0.0.0.0:8000/train/LogisticRegression" --output LR.pkl 
+curl -X GET "http://0.0.0.0:8000/getModel" --output model.joblib
 ```
 
 ### Interaction
@@ -47,17 +35,36 @@ curl -X GET "http://0.0.0.0:8000/getModelScore"
 
 
 #Do prediction with current model with sample json file
-curl -X POST "http://0.0.0.0:8000/predict" -H "accept: application/json" -H "Content-Type: application/json" -d @feature.json 
+curl -X POST "http://0.0.0.0:8000/predict" -H "accept: application/json" -H "Content-Type: application/json" -d @predict.json 
 ```
 
 #### Sample json file
 
-Feature must be a string key follow with a list of 12 number, with basic input checking.
+Feature must be a dict with a 13 features str:float, with basic input checking.
 ```json
 {
-    "features":{
-        "1":[50,0,115,0,45,1,184000,0.9,134,1,1,118],
-        "2":[45,1,981,0,30,0,136000,1.1,137,1,0,11]
-        }
+"features":
+    {
+        "age":75,"anaemia":0,"creatinine_phosphokinase":582,"diabetes":0,"ejection_fraction":20,"high_blood_pressure":1,"platelets":265000,"serum_creatinine":1.9,"serum_sodium":130,"sex":1,"smoking":0,"time":4,"DEATH_EVENT":1
+    }
 }
 ```
+
+### Model design
+
+Looking through the data (In Visualization and Modeling notebook), this is a relative small dataset.
+With some mixed binary/numerical data, the numerical data has obvious outlier.
+By visualize the Pearson correlation coefficient, we can clear see some data, especially the binary columns like gender has very little correlation with the mortality.
+Due to this small dataset, I choose to do some feature engineering, neglect some data and use relativly simple model to reduce the variance, and use stacking method to ensemble the model.
+Logistic Regression and SVM perform really well on this scale of data, decision tree related are easily overfit, and I choose KNN because by looking through this dataset, it's pretty balanced so I think KNN might be a good one algorithm. 
+
+
+
+### Reference
+
+Ensemble
+https://towardsdatascience.com/ensemble-learning-using-scikit-learn-85c4531ff86a
+
+GridSearch for optimization and pipeline for basic feature engineering
+https://scikit-learn.org/stable/modules/grid_search.html#composite-grid-search
+

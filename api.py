@@ -3,12 +3,12 @@ from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 from starlette.routing import request_response
-from starlette.types import Message
+import pandas as pd
 from model import ModelFactory
 from typing import Optional, List, Dict
 from enum import Enum
 import numpy as np
-
+from config import *
 
 
 
@@ -16,10 +16,11 @@ class ModelName(str, Enum):
     dt = "DecisionTree"
     svm = "SVM"
     lr = "LogisticRegression"
+    rf = "RandomForest"
 
 
 class PredictRequest(BaseModel):
-    features: Dict[str, List[float]]
+    features: Dict[str, float]
 
 
 class ModelResponse(BaseModel):
@@ -58,53 +59,37 @@ async def explain_api() -> ModelResponse:
 @app.post("/predict")
 async def get_model_predictions(request: PredictRequest) -> ModelResponse:
     feature=request.features
-    tmp = []
     try:
         for k, v in feature.items():
-            if len(v) != 12:
-                raise IndexError
-            tmp.append(v)
-        inputVector = np.asarray(tmp)
-    except IndexError:
-        return ModelResponse(error="Invalid input data shape")
-#    print(inputVector)
-    output = MF.predict(inputVector)
-#    print(output)
-    res = {}
-    for idx, k in enumerate(feature.keys()):
-        res[k]= output[idx]
-#    print(res)
+            if k not in featureKeys:
+                raise KeyError
+            if type(v) != int and type(v) != float:
+                raise ValueError
+    except KeyError:
+        return ModelResponse(error = "Invalid input feature key")
+    except ValueError:
+        return ModelResponse(error = "Invalid input feature value")
+    d = pd.DataFrame.from_dict([feature])
+    f = d.drop(columns=['DEATH_EVENT'])
+    output = MF.predict(f)
+    res = zip([str(i) for i in range(d.shape[0])], output)
     return ModelResponse(predictions=[res])
     
 
-@app.post("/train")
-async def setData(request:TrainRequest):
-    modelName = request.model
-    try:
-        splitRatio = np.array(request.split)
-        if len(splitRatio)!=3 or len([*filter(lambda x: x>=0, splitRatio)]) <3 or np.sum(splitRatio)!=1:
-            raise ValueError
-    except ValueError:
-        return "Invalid input format for split ratio"
-    MF.genDataSet(*splitRatio)
-    MF.setModel(modelName.value)
-    if request.save == True:
-        return FileResponse(path="./temp/{}.pkl".format(modelName), filename="{}.pkl".format(modelName))
+
+@app.get("/train")
+async def trainModel(save : bool=False):
+    MF.genDataSet()
+    MF.getModel()
+    if save:
+        return FileResponse(path="./temp/model.joblib", filename="model.joblib")
     else:
-        return "Training finished" 
+        return TrainResponse(message="Training Success") 
 
+@app.get("/getModel")
+async def getModel()->FileResponse:
+    return FileResponse(path="./temp/model.joblib", filename="model.joblib") 
 
-@app.get("/train/{modelName}/")
-async def trainModel(modelName: ModelName):
-    return FileResponse(path="./temp/{}.pkl".format(modelName), filename="{}.pkl".format(modelName))
-
-
-
-@app.get("/testModel", response_model=ModelResponse)
-async def testMF() -> ModelResponse:
-    X = np.array([[63,1,103,1,35,0,179000,0.9,136,1,1,270]])
-    P = MF.predict(X)
-    return ModelResponse(predictions=[{"Prediction":P}])
 
 @app.get("/getModelScore")
 async def getScore():
