@@ -4,29 +4,31 @@ from sklearn.linear_model import LogisticRegression
 import numpy as np
 import argparse
 import json
-
-
-
-class ModelName(str, Enum):
-    dt = "DecisionTree"
-    svm = "SVM"
-    lr = "LogisticRegression"
+import pandas as pd
+from config import *
 
 
 def processFeature(inputFile):
     f = open(inputFile, 'rb')
     feature = json.load(f)['features']
-    tmp = []
-    for k, v in feature.items():
-        tmp.append(v)
-    inputVector = np.asarray(tmp)
-    f.close()
-    return inputVector
+    try:
+        for k, v in feature.items():
+            if k not in featureKeys:
+                raise KeyError
+            if type(v) != int and type(v) != float:
+                raise ValueError
+    except KeyError:
+        return "Invalid input feature key"
+    except ValueError:
+        return "Invalid input feature value"
+    d = pd.DataFrame.from_dict([feature])
+    f = d.drop(columns=['DEATH_EVENT'])[selectedFeatures]
+    return f
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m","--model", help="Path to the model", default="temp/LogisticRegression.joblib")
-    parser.add_argument("-f","--feature", help="Assign the path to the feature to predict", default="feature.json")
+    parser.add_argument("-m","--model", help="Path to the model", default="temp/model.joblib")
+    parser.add_argument("-f","--feature", help="Assign the path to the feature to predict", default="predict.json")
     args = parser.parse_args()
 
     model = open(args.model, 'rb')
