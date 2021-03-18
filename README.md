@@ -36,7 +36,17 @@ curl -X GET "http://0.0.0.0:8000/getModelScore"
 
 #Do prediction with current model with sample json file
 curl -X POST "http://0.0.0.0:8000/predict" -H "accept: application/json" -H "Content-Type: application/json" -d @predict.json 
+
+#Perform basic testing
+python tester.py
+
+#Perform loading models and test the inpput
+
+python tester.py -p true -m {path/to/model} -f {path/to/predict.json}
+
 ```
+
+
 
 #### Sample json file
 

@@ -78,7 +78,8 @@ if __name__ == "__main__":
    
         input = processFeature(args.feature)
         print(clf.predict(input))
-    getTrain()
-    getTrainSaved()
-    getTrainResult()
-    postPredict()
+    else:
+        getTrain()
+        getTrainSaved()
+        getTrainResult()
+        postPredict()
